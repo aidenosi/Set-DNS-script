@@ -56,6 +56,7 @@ IF %dns_choice% GEQ 4 GOTO :invalidInput
 :: Set DNS address to default DNS
 :defaultDNS
 netsh interface ipv4 set dns %connection% static %default%
+IF NOT %errorLevel%==0 GOTO :invalidDefault
 ipconfig /flushdns
 ECHO DNS address for %connection% set to default DNS (%default%).
 GOTO :complete
@@ -63,12 +64,14 @@ GOTO :complete
 :: Set DNS address to specified address
 :otherDNS
 SET /p input_dns_address=Enter the DNS address you wish to use: 
+netsh interface ipv4 set dns %connection% static %input_dns_address%
+IF NOT %errorLevel%==0 GOTO :invalidInput
 :: Allows user to set an alternate DNS address
 SET /p alt_dns_address=Enter the alternate DNS address you wish to use, or press ENTER to not use an alternate address: 
-netsh interface ipv4 set dns %connection% static %input_dns_address%
 IF DEFINED alt_dns_address (
 	netsh interface ipv4 add dns name=%connection% %alt_dns_address% index=2
 )
+IF NOT %errorLevel%==0 GOTO :invalidInput
 ipconfig /flushdns
 ECHO DNS address for %connection% set to %input_dns_address%.
 IF DEFINED alt_dns_address (
@@ -85,7 +88,12 @@ GOTO :complete
 :invalidInput
 ECHO Error: invalid input.
 IF NOT DEFINED dns_choice (GOTO :start)
-GOTO :chooseDNS
+IF NOT DEFINED input_dns_address (GOTO :chooseDNS)
+GOTO :otherDNS
+
+:invalidDefault
+ECHO Default address is invalid. Please fix and run the script again.
+GOTO :end
 
 :complete
 IF DEFINED both (
